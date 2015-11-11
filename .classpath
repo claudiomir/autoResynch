@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/home/claudio/workspace/autoResynch/sphinx4-core-1.0-20150630.174404-9.jar"/>
+	<classpathentry kind="lib" path="/home/claudio/workspace/autoResynch/sphinx4-data-1.0-20150630.174256-9.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
