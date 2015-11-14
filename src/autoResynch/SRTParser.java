@@ -77,6 +77,7 @@ public class SRTParser {
             //millisecs += hours*60*60*1000 + minutes*60*1000 + seconds*1000;
             
             count++;
+            
         }
         
         return matcher;
@@ -136,6 +137,7 @@ public class SRTParser {
 		byte[] encoded = Files.readAllBytes(Paths.get(path));
 		
 		return new String(encoded, encoding);
+		
 	}
 
 }
