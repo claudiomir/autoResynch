@@ -8,17 +8,24 @@ import java.nio.file.Paths;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class SRTParser {
+public class SRTParser implements Cloneable {
 	
 	private String srt;
 	private int sampling;
 	
-	int nSubtitles = 0;
+	private int nSubtitles = 0;
 	
 	private int[][] startTimings;
 	private int[][] stopTimings;
 	
 	private String[] lines;
+	
+	public SRTParser(){
+		
+		srt = "";
+		sampling = 0;
+		
+	}
 	
 	public SRTParser(String filename, int samp){
 		
@@ -26,6 +33,7 @@ public class SRTParser {
 			
 			srt = readFile(filename, StandardCharsets.UTF_8);
 			sampling = samp;
+			this.srtParse();
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -33,6 +41,21 @@ public class SRTParser {
 		}
 		
 	}
+	
+	public SRTParser(SRTParser s){
+		
+		this.srt = s.srt;
+		this.sampling = s.sampling;
+		this.nSubtitles = s.nSubtitles;
+		this.startTimings = s.startTimings;
+		this.stopTimings = s.stopTimings;
+		this.lines = s.lines;
+		
+	}
+	
+    protected Object clone() throws CloneNotSupportedException {
+        return super.clone();
+    }
 	
 	public Matcher srtParse() throws IOException{
 		
@@ -48,7 +71,6 @@ public class SRTParser {
         Matcher matcher = pattern.matcher(srt);
 		
         while(matcher.find()) nSubtitles++;
-        
         matcher.reset();
         
         //timing is made of hh:mm:ss,ms
@@ -72,7 +94,7 @@ public class SRTParser {
         	stopTimings[count][2] = Integer.parseInt(matcher.group(8));
         	stopTimings[count][3] = Integer.parseInt(matcher.group(9));
         	
-        	lines[count] = matcher.group(10) + "\n" + matcher.group(11);
+        	lines[count] = matcher.group(11);//matcher.group(10); + "\n" + 
             
             //millisecs += hours*60*60*1000 + minutes*60*1000 + seconds*1000;
             
@@ -120,10 +142,15 @@ public class SRTParser {
 	}
 	
 	public int getPeak(int i){
-		
 		//returns peak sample for i-th line
-		return sampling*startTimings[i][0]*60*60*1000 + startTimings[i][1]*60*1000 + startTimings[i][2]*1000 + startTimings[i][3];
+		return sampling*(startTimings[i][0]*60*60*1000 + startTimings[i][1]*60*1000 + startTimings[i][2]*1000 + startTimings[i][3]);
 		
+	}
+	
+	public int getStopPeak(int i){
+		
+		return sampling*(stopTimings[i][0]*60*60*1000 + stopTimings[i][1]*60*1000 + stopTimings[i][2]*1000 + stopTimings[i][3]);
+
 	}
 	
 	public String getLineNumber(int i){
@@ -139,5 +166,110 @@ public class SRTParser {
 		return new String(encoded, encoding);
 		
 	}
+	
+	public int[] sampleNumberToHHMMSSMS(int sampleNumber){
+		
+		int[] HHMMSSMS = new int[4];
+		
+		int totalMilliseconds = (int)((double)sampleNumber/sampling);
 
+		int milliseconds = totalMilliseconds % 1000;
+		
+		int totalSeconds = (totalMilliseconds - milliseconds)/1000;
+		
+		int seconds = totalSeconds % 60;
+		
+		int totalMinutes = (totalSeconds-seconds)/60;
+		
+		int minutes = totalMinutes%60;
+		
+		int hours = (totalMinutes-minutes)/60;
+		
+		//System.out.println("0" + hours + ":0" + minutes + ":" + seconds + "," + milliseconds);
+		
+		HHMMSSMS[0] = hours;
+		HHMMSSMS[1] = minutes;
+		HHMMSSMS[2] = seconds;
+		HHMMSSMS[3] = milliseconds;
+		
+		return HHMMSSMS;
+		
+	}
+	
+	public void applyDelay(int delay){
+				
+		for(int i=0; i < this.nSubtitles; i++){
+			
+			startTimings[i] = sampleNumberToHHMMSSMS(this.getPeak(i)+delay);
+			stopTimings[i] = sampleNumberToHHMMSSMS(this.getStopPeak(i)+delay);
+
+		}
+	}
+
+	public void print(){
+		
+		for(int i=0; i < this.nSubtitles; i++){
+
+			System.out.println(i);
+			
+			if(startTimings[i][0] < 10){ System.out.print("0"+startTimings[i][0]); } else { System.out.print(startTimings[i][0]); };
+			System.out.print(":");
+			if(startTimings[i][1] < 10){ System.out.print("0"+startTimings[i][1]); } else { System.out.print(startTimings[i][1]); };
+			System.out.print(":");
+			if(startTimings[i][2] < 10){ System.out.print("0"+startTimings[i][2]); } else { System.out.print(startTimings[i][2]); };
+			System.out.print(",");
+			if(startTimings[i][3] < 10){ System.out.print("00"+startTimings[i][3]); } else if (startTimings[i][3] < 100){ System.out.print("0"+startTimings[i][3]); } else { System.out.print(startTimings[i][3]); };
+			
+			System.out.print(" --> ");
+			
+			if(stopTimings[i][0] < 10){ System.out.print("0"+stopTimings[i][0]); } else { System.out.print(stopTimings[i][0]); };
+			System.out.print(":");
+			if(stopTimings[i][1] < 10){ System.out.print("0"+stopTimings[i][1]); } else { System.out.print(stopTimings[i][1]); };
+			System.out.print(":");
+			if(stopTimings[i][2] < 10){ System.out.print("0"+stopTimings[i][2]); } else { System.out.print(stopTimings[i][2]); };
+			System.out.print(",");
+			if(stopTimings[i][3] < 10){ System.out.print("00"+stopTimings[i][3]); } else if (stopTimings[i][3] < 100){ System.out.print("0"+stopTimings[i][3]); } else { System.out.print(stopTimings[i][3]); };
+			
+			System.out.println();
+			
+			System.out.println(lines[i]);
+			
+			System.out.println();
+			
+		}
+		
+	}
+	
+	public void print(int i){
+		
+
+			System.out.println(i+1);
+			
+			if(startTimings[i][0] < 10){ System.out.print("0"+startTimings[i][0]); } else { System.out.print(startTimings[i][0]); };
+			System.out.print(":");
+			if(startTimings[i][1] < 10){ System.out.print("0"+startTimings[i][1]); } else { System.out.print(startTimings[i][1]); };
+			System.out.print(":");
+			if(startTimings[i][2] < 10){ System.out.print("0"+startTimings[i][2]); } else { System.out.print(startTimings[i][2]); };
+			System.out.print(",");
+			if(startTimings[i][3] < 10){ System.out.print("00"+startTimings[i][3]); } else if (startTimings[i][3] < 100){ System.out.print("0"+startTimings[i][3]); } else { System.out.print(startTimings[i][3]); };
+			
+			System.out.print(" --> ");
+			
+			if(stopTimings[i][0] < 10){ System.out.print("0"+stopTimings[i][0]); } else { System.out.print(stopTimings[i][0]); };
+			System.out.print(":");
+			if(stopTimings[i][1] < 10){ System.out.print("0"+stopTimings[i][1]); } else { System.out.print(stopTimings[i][1]); };
+			System.out.print(":");
+			if(stopTimings[i][2] < 10){ System.out.print("0"+stopTimings[i][2]); } else { System.out.print(stopTimings[i][2]); };
+			System.out.print(",");
+			if(stopTimings[i][3] < 10){ System.out.print("00"+stopTimings[i][3]); } else if (stopTimings[i][3] < 100){ System.out.print("0"+stopTimings[i][3]); } else { System.out.print(stopTimings[i][3]); };
+			
+			System.out.println();
+			
+			System.out.println(lines[i]);
+			
+			System.out.println();
+			
+		
+		
+	}
 }

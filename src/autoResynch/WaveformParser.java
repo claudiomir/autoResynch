@@ -20,6 +20,13 @@ public class WaveformParser {
 				
 			fileName = name;
 			sampling = samp;
+			
+			try {
+				this.loadWaveform();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 
 	}
 	
@@ -37,7 +44,7 @@ public class WaveformParser {
 				
 			in.readFully(byteArray);
 			ByteBuffer bb = ByteBuffer.wrap(byteArray);
-			bb.order( ByteOrder.LITTLE_ENDIAN);
+			bb.order(ByteOrder.LITTLE_ENDIAN);
 			short data = bb.getShort();
 
 			samples[i] = data;
@@ -167,7 +174,7 @@ public class WaveformParser {
 			}
 			
 		}
-		
+		System.out.println("Min distance: " +minDistance);
 		return minIndex;
 	}
 	
