@@ -6,22 +6,17 @@ import java.io.RandomAccessFile;
 public class AutoResynch {
 	
 	static int sampling = 16;
-	static int windowSize = sampling*500;
+	static int windowSize = sampling*750;
 	
 	public static void main(String[] args) throws IOException {
 				
 		System.out.print("Loading subtitle file...");
-		SRTParser srt1 = new SRTParser("test/sample.srt", sampling);
+		SRTParser srt1 = new SRTParser("test/Greys.Anatomy.s12e05.italiansubs.srt", sampling);
 		
 		SRTParser srt2 = new SRTParser();
 		
-		try {
-			srt2 = (SRTParser ) srt1.clone();
-		} catch (CloneNotSupportedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} // this line will return you an independent
-
+		srt2 = (SRTParser) DeepCopy.copy(srt1);
+		
 		System.out.println(" done.");
 		
 		System.out.print("Loading waveform 1...");
@@ -41,18 +36,25 @@ public class AutoResynch {
 		int delayedPeak = 0;
 		int delay = 0;
 		
+		double avg1 = w1.getAverageAmplitude();
+		double avg2 = w2.getAverageAmplitude();
+		System.out.println(avg1 + " " + avg2);
+		double ratio = avg2/avg1;
+		
+		//w1.normaliseBy(ratio);
+		
 		for(int i = 0; i < nLines; i++){
 			
 			
 			currentSampleSet = w1.getNSamples(srt1.getPeak(i), windowSize);
 
-			delayedPeak = w2.compareNSamplesWithAllSamplesBound(currentSampleSet, srt2.getPeak(i), 48000);//, w1.getAverageAmplitudeNumber(i));
+			delayedPeak = w2.compareNSamplesWithAllSamplesBound(currentSampleSet, srt2.getPeak(i), 48000 + delay/2);//, w1.getAverageAmplitudeNumber(i));
 				
 			delay = delayedPeak - srt2.getPeak(i);
+			System.out.println(delay);
+			srt2.applyDelayFrom(i, delay);
 			
-			srt1.applyDelay(delay);
-			
-			srt2.print(i);
+			//srt2.print(i);
 
 		}
 		

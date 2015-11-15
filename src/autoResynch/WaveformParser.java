@@ -48,10 +48,10 @@ public class WaveformParser {
 			short data = bb.getShort();
 
 			samples[i] = data;
-			averageAmplitude += Math.abs(data/nSamples);
+			averageAmplitude += Math.abs(data);
 			
 		}
-		
+		averageAmplitude/=nSamples;
 		in.close();
 	}
 	
@@ -174,7 +174,6 @@ public class WaveformParser {
 			}
 			
 		}
-		System.out.println("Min distance: " +minDistance);
 		return minIndex;
 	}
 	
@@ -186,31 +185,28 @@ public class WaveformParser {
 		
 		for(int i = nSamples-2; i >= 0; i--){
 
-			mobileAverage[i] += (samples[i] + mobileAverage[i+1]);
-			
+			mobileAverage[i] = (Math.abs(samples[i]) + mobileAverage[i+1]);
+
 			if(i + windowSize < nSamples){
-				
-				mobileAverage[i] -= mobileAverage[i+windowSize];
+
+				mobileAverage[i] -= Math.abs(samples[i+windowSize]);
 				
 			}
-			
-			mobileAverage[i]/= Math.min(windowSize, nSamples - i);
-			
+
 		}
-		
+
+		for(int i = nSamples-2; i >= 0; i--){
+
+			mobileAverage[i] /= windowSize;
+
+		}
 	}
+	
 	
 	public int[] getNSamples(int i, int n){
 		
-		int[] nSamples;// = new int[n];
+		return Arrays.copyOfRange(samples, i, i+n);
 		
-		//for(int l = 0; l < n; l++){
-			
-			//nSamples[l] = samples[i+l];
-			
-		//}
-		
-		return nSamples = Arrays.copyOfRange(samples, i, i+n);
 	}
 	
 	public int getSampleNumber(int i){

@@ -1,6 +1,7 @@
 package autoResynch;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -8,7 +9,7 @@ import java.nio.file.Paths;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class SRTParser implements Cloneable {
+public class SRTParser implements Serializable {
 	
 	private String srt;
 	private int sampling;
@@ -52,11 +53,7 @@ public class SRTParser implements Cloneable {
 		this.lines = s.lines;
 		
 	}
-	
-    protected Object clone() throws CloneNotSupportedException {
-        return super.clone();
-    }
-	
+		
 	public Matcher srtParse() throws IOException{
 		
 		//pattern for reading srt format
@@ -206,6 +203,16 @@ public class SRTParser implements Cloneable {
 		}
 	}
 
+	public void applyDelayFrom(int from, int delay){
+		
+		for(int i=from; i < this.nSubtitles; i++){
+			
+			startTimings[i] = sampleNumberToHHMMSSMS(this.getPeak(i)+delay);
+			stopTimings[i] = sampleNumberToHHMMSSMS(this.getStopPeak(i)+delay);
+
+		}
+	}
+	
 	public void print(){
 		
 		for(int i=0; i < this.nSubtitles; i++){
