@@ -12,7 +12,7 @@ public class AutoResynch {
 	public static void main(String[] args) throws IOException {
 				
 		System.out.print("Loading subtitle file...");
-		SRTParser srt1 = new SRTParser("test/Unforgettable.s04e07.italiansubs.srt", sampling);
+		SRTParser srt1 = new SRTParser("test/Unforgettable.s04e01.italiansubs.srt", sampling);
 		SRTParser srt2 = new SRTParser();
 		
 		srt2 = (SRTParser) DeepCopy.copy(srt1);
@@ -25,6 +25,8 @@ public class AutoResynch {
 		WaveformParser w2 = new WaveformParser("test/2.bin", sampling);
 		System.out.println(" done.");
 
+		System.out.println("Number of breaks in waveform 1...:" + w1.getNumberOfBreaks());
+		System.out.println("Number of breaks in waveform 2...:" + w2.getNumberOfBreaks());
 		/*System.out.print("Setting waveform 1 and 2 mobile average...");
 		w1.setMobileAverage(windowSize);
 		w2.setMobileAverage(windowSize);
@@ -46,8 +48,34 @@ public class AutoResynch {
 		double avgDelay = 0;
 		int searchWindow = 48000;
 		int errorCount = 0;
-		for(int i = 0; i < nLines; i++){
+		
+		int numberOfSamples1 = w1.getNumberOfSamples();
+		boolean[] silence = w1.getSilentSamples();
+		
+		int i = 0;
+		boolean comingFromABreak = false;
+		
+		int currentPeak = srt1.getPeak(i);
+		
+		
+		for(int j = 0; j < numberOfSamples1; j++){
 			
+			if(silence[j]){//commercial break?
+				comingFromABreak = true;
+				System.out.println("Break found at second: " + (double)j/16000.0);
+			}
+			
+			if(j != currentPeak){
+				continue;
+			}
+			
+			if(comingFromABreak || i == 0){//wider window search
+				comingFromABreak = false;
+				searchWindow = 160000;
+			}else if(i > 0){
+				searchWindow = (int) (threshold * (srt1.getPeak(i)-srt1.getPeak(i-1)));//last delay, multiplied by two int)(threshold * (currentPeak - srt1.getPeak(i-1))); 
+				System.out.println("New search window: " + searchWindow);
+			}
 			
 			currentSampleSet = w1.getNSamples(srt1.getPeak(i), windowSize);
 
@@ -98,6 +126,11 @@ public class AutoResynch {
 				errorCount=0;
 			}
 
+			i++;//onto the next line
+			
+			if(i < srt1.getNumberLines()){
+				currentPeak = srt1.getPeak(i);
+			}
 		}
 		avgDelay /= nLines;
 		System.out.println("Average delay: " + avgDelay);

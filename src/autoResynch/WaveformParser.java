@@ -16,6 +16,7 @@ public class WaveformParser {
 	private int[] samples;
 	private double[] mobileAverage;
 	private boolean[] silence;
+	private int numberOfBreaks;
 	
 	public WaveformParser(String name, int samp){
 				
@@ -36,13 +37,15 @@ public class WaveformParser {
 		in = new RandomAccessFile(fileName, "r");
 		nSamples = (int) (in.length()/2);
 		silence = new boolean[nSamples];
+		numberOfBreaks = 0;
 		
 		byte[] byteArray = new byte[2]; 
 
 		samples = new int[nSamples];
 		averageAmplitude = 0;
 		int count = 0;
-
+		boolean isSilence = false;
+		
 		for(int i = 0; i < nSamples; i++){
 				
 			in.readFully(byteArray);
@@ -51,19 +54,38 @@ public class WaveformParser {
 			short data = bb.getShort();
 
 			samples[i] = data;
-			if(Math.abs(samples[i]) < 10){
+			if(Math.abs(samples[i]) < 100){
 				count++;
+				if(count > 300){
+					isSilence = true;
+				}
 			}else{
+				
+				if(isSilence){
+					silence[i-1] = true;
+					//System.out.println("Silence interrupted at "+ (i-1) + "\n");
+					
+					/*for(int r=0; r < 100; r++){
+						
+						System.out.println(samples[i-r]);
+
+					}*/
+
+					numberOfBreaks++;
+				}
 				count = 0;
+				isSilence = false;
 			}
 			
-			if(count > 300){
-				silence[i] = true;
+			//if(count > 300){
+				//isSilence = true;
+				
+				//silence[i] = true;
 				//System.out.println((double)i/16000);
-				count = 0;
-			}else{
-				silence[i] = false;
-			}
+				//count = 0;
+			//}else{
+				//silence[i] = false;
+			//}
 			averageAmplitude += Math.abs(data);
 			
 		}
@@ -235,10 +257,28 @@ public class WaveformParser {
 		return averageAmplitude;
 		
 	}
-
+	
+	public int getNumberOfSamples(){
+		
+		return nSamples;
+		
+	}
+	
+	public int getNumberOfBreaks(){
+		
+		return numberOfBreaks;
+		
+	}
+	
 	public double getAverageAmplitudeNumber(int i){
 		
 		return mobileAverage[i];
+		
+	}
+	
+	public boolean[] getSilentSamples(){
+		
+		return silence;
 		
 	}
 
