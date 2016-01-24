@@ -213,6 +213,30 @@ public class SRTParser implements Serializable {
 		}
 	}
 	
+	public void applyDelayFrom(int from, int delay, double normDelay){
+		
+		for(int i=from; i < this.nSubtitles; i++){
+			
+			startTimings[i] = sampleNumberToHHMMSSMS(this.getPeak(i)+delay);
+			
+			if(i==from){
+				stopTimings[i] = sampleNumberToHHMMSSMS(this.getStopPeak(i)+delay+(Math.min(0, (int)Math.round(normDelay*(getStopPeak(i)-getPeak(i))))));
+				//System.out.println((int)Math.round(normDelay*(getStopPeak(i)-getPeak(i))));
+			}else{
+				stopTimings[i] = sampleNumberToHHMMSSMS(this.getStopPeak(i)+delay);
+			}
+		}
+	}
+	
+	public void applyDelayAt(int i, int delay){
+		
+			
+			startTimings[i] = sampleNumberToHHMMSSMS(this.getPeak(i)+delay);
+			stopTimings[i] = sampleNumberToHHMMSSMS(this.getStopPeak(i)+delay);
+
+		
+	}
+	
 	public void print(){
 		
 		for(int i=0; i < this.nSubtitles; i++){

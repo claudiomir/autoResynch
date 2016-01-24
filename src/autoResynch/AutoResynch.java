@@ -7,14 +7,12 @@ public class AutoResynch {
 	
 	static int sampling = 16;
 	static int windowSize = sampling*500;
-	static double threshold = 0.06;
+	static double threshold = 0.1;
 	
 	public static void main(String[] args) throws IOException {
 				
 		System.out.print("Loading subtitle file...");
-		//SRTParser srt1 = new SRTParser("test/Greys.Anatomy.s12e05.italiansubs.srt", sampling);
-		SRTParser srt1 = new SRTParser("test/The.Walking.Dead.s06e07.italiansubs.srt", sampling);
-		//SRTParser srt1 = new SRTParser("test/sample.srt", sampling);
+		SRTParser srt1 = new SRTParser("test/Unforgettable.s04e07.italiansubs.srt", sampling);
 		SRTParser srt2 = new SRTParser();
 		
 		srt2 = (SRTParser) DeepCopy.copy(srt1);
@@ -46,17 +44,19 @@ public class AutoResynch {
 		*/
 		//w1.normaliseBy(ratio);
 		double avgDelay = 0;
-		int searchWindow = 480000;
+		int searchWindow = 48000;
+		int errorCount = 0;
 		for(int i = 0; i < nLines; i++){
 			
 			
 			currentSampleSet = w1.getNSamples(srt1.getPeak(i), windowSize);
 
 			delayedPeak = w2.compareNSamplesWithAllSamplesBound(currentSampleSet, srt2.getPeak(i), searchWindow);//, w1.getAverageAmplitudeNumber(i));
-				
 			delay = delayedPeak - srt2.getPeak(i);
 			
-			if(delay > threshold){
+			delay += (16 - (delay % 16));
+			
+			if(i > 0 && Math.abs((double)delays[i]/(srt1.getPeak(i)-srt1.getPeak(i-1))) > threshold){
 				
 				searchWindow = searchWindow + Math.abs(delay);
 				
@@ -66,7 +66,13 @@ public class AutoResynch {
 				
 			}
 			
-			srt2.applyDelayFrom(i, delay);
+			
+			if(i>0){
+				srt2.applyDelayFrom(i, delay, (double)delay/(srt1.getPeak(i)-srt1.getPeak(i-1)));
+			}else{
+				srt2.applyDelayFrom(i, delay);
+			}
+			//srt2.applyDelayAt(i, delay);
 			if(i>0){
 				System.out.println(delay + " " +(double)delay/(srt1.getPeak(i)-srt1.getPeak(i-1)));
 			}else{
@@ -75,6 +81,22 @@ public class AutoResynch {
 			delays[i] = delay;
 			avgDelay += delay;
 
+			
+			if(i> 0 && Math.abs((double)delays[i]/(srt1.getPeak(i)-srt1.getPeak(i-1))) > threshold){
+				
+				errorCount++;
+				
+				if(errorCount > 10){
+					
+					System.out.println("Something's wrong... trying to fix it");
+					//go back to the first possible error
+					//i -= 10;
+					errorCount = 0;
+				}
+				
+			}else{
+				errorCount=0;
+			}
 
 		}
 		avgDelay /= nLines;
@@ -83,11 +105,13 @@ public class AutoResynch {
 		
 		int countErrors = 0;
 		int sumErrors = 0;
-
-		for (int j = 0; j < delays.length; j++){
+		double sumErrorsPerFrame = 0;
+		
+		//should we ever consider the first delay a possible error?
+		for (int j = 1; j < delays.length; j++){
 			if((j > 0 && Math.abs((double)delays[j]/(srt1.getPeak(j)-srt1.getPeak(j-1))) > threshold) || (j+1 < delays.length && countErrors > 0 && Math.abs((double)delays[j+1]/(srt1.getPeak(j+1)-srt1.getPeak(j))) > threshold)) {
 				countErrors++;
-				
+				System.out.println("Possible error at line " + j + ", will attempt to fix");
 				if(countErrors > 1) {
 					sumErrors += delays[j-1];
 				}
@@ -96,9 +120,16 @@ public class AutoResynch {
 				if(countErrors > 1) {
 					sumErrors += delays[j-1];
 					
+					//normalising the sum of the errors by the number of frames between the last correct line and the last "wrong" line
+					sumErrorsPerFrame = ((double)sumErrors)/(srt1.getPeak(j-1) - srt1.getPeak(j-countErrors-1));
+					System.out.print("Delay totale: " + sumErrors);
 					for(int k = 0; k < countErrors; k++) {
-						delays[j-k-1] = Math.round(sumErrors/countErrors);
+						if(j-k-1 > 0){
+							delays[j-k-1] = (int) Math.round(sumErrorsPerFrame * (srt1.getPeak(j-k-1) - srt1.getPeak(j-k-2)));//.round(sumErrors/countErrors);////
+							System.out.print(" " + delays[j-k-1]);
+						}
 					}
+					System.out.println("");
 				}				
 				sumErrors = 0;
 				countErrors = 0;
@@ -110,8 +141,16 @@ public class AutoResynch {
 		srt2 = (SRTParser) DeepCopy.copy(srt1);
 		int count = 0;
 		for(int d : delays) {
-			//System.out.println(d);	
-			srt2.applyDelayFrom(count, d);
+			//System.out.println(d);
+			if(count > 0){
+				
+				srt2.applyDelayFrom(count, d, (double)d/(srt1.getPeak(count)-srt1.getPeak(count-1)));
+
+			}else{
+
+				srt2.applyDelayFrom(count, d);
+
+			}
 			srt2.print(count);
 			count++;
 		}				

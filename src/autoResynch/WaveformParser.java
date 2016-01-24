@@ -15,6 +15,7 @@ public class WaveformParser {
 	private double averageAmplitude;
 	private int[] samples;
 	private double[] mobileAverage;
+	private boolean[] silence;
 	
 	public WaveformParser(String name, int samp){
 				
@@ -34,12 +35,14 @@ public class WaveformParser {
 		
 		in = new RandomAccessFile(fileName, "r");
 		nSamples = (int) (in.length()/2);
+		silence = new boolean[nSamples];
 		
 		byte[] byteArray = new byte[2]; 
 
 		samples = new int[nSamples];
 		averageAmplitude = 0;
-	
+		int count = 0;
+
 		for(int i = 0; i < nSamples; i++){
 				
 			in.readFully(byteArray);
@@ -48,6 +51,19 @@ public class WaveformParser {
 			short data = bb.getShort();
 
 			samples[i] = data;
+			if(Math.abs(samples[i]) < 10){
+				count++;
+			}else{
+				count = 0;
+			}
+			
+			if(count > 300){
+				silence[i] = true;
+				//System.out.println((double)i/16000);
+				count = 0;
+			}else{
+				silence[i] = false;
+			}
 			averageAmplitude += Math.abs(data);
 			
 		}
@@ -198,7 +214,6 @@ public class WaveformParser {
 		for(int i = nSamples-2; i >= 0; i--){
 
 			mobileAverage[i] /= windowSize;
-
 		}
 	}
 	
